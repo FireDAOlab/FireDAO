@@ -6,39 +6,28 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 contract FDSBT001 is ERC20 ,Ownable{
     using SafeMath for uint256;
 
-    string public logo;
     struct Checkpoint {
         uint32 fromBlock;
         uint96 votes;
     }
-    bool public status = false;
-    address public minter;
-    address public admin;
+    bool public status;
+    address public exchangePoolAddress;
     address public LockAddress;
     mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
     mapping (address => uint32) public numCheckpoints;
     
     event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
     event AdminChange(address indexed Admin, address indexed newAdmin);
-    constructor(address manager,address _minter,uint256 _totalSupply,string memory _logo)   ERC20("FDSBD001", "FDSBD001"){
-        logo = _logo;
-        _mint(manager, _totalSupply * 10 ** 18);
-        _addDelegates(manager, safe96(_totalSupply * 10 ** 18,"erc20: vote amount underflows"));
-        minter = _minter;
-        admin = manager;
+    constructor() ERC20("SBT-001", "SBT-001"){
     }
-    modifier  _isMinter() {
-        require(msg.sender == minter);
-        _;
-    }
-    modifier  _isOwner() {
-        require(msg.sender == admin);
-        _;
+    function setExchangepool(address _exchangePoolAddress) public onlyOwner {
+        exchangePoolAddress = _exchangePoolAddress;
     }
     function setMintExternalAddress(address _LockAddress) public onlyOwner{
         LockAddress =_LockAddress;
@@ -46,21 +35,17 @@ contract FDSBT001 is ERC20 ,Ownable{
     function setContractStatus() public onlyOwner {
         status = !status;
     }
-    function mint(address account, uint256 amount) public _isMinter returns (bool) {
-        require(!status , "status is not able");
-        _mint( account, amount);
-        return true;
-    }
-    function mintExternal(address User, uint256 mintAmount) external {
-        require(msg.sender == LockAddress,"you set Address is error"); 
-        _mint(User, mintAmount);
-    }
-    function burnExternal(address User, uint256 mintAmount) external {
-        require(msg.sender == LockAddress,"you set Address is error"); 
-        _burn(User, mintAmount);
-    }
 
+    function mint(address Account, uint256 Amount) external {
+        require(msg.sender == LockAddress || msg.sender == exchangePoolAddress,"you set Address is error"); 
+        _mint(Account, Amount);
 
+    }
+    function burn(address Account, uint256 Amount) external {
+        require(msg.sender == LockAddress || msg.sender == exchangePoolAddress,"you set Address is error"); 
+        _burn(Account, Amount);
+
+    }
     function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
         require(!status , "status is not able");
 
